@@ -33,7 +33,7 @@ A comprehensive web-based grade tracking and prediction tool designed for studen
 - **ECTS Credits**: Track subject credits for weighted GPA calculation
 - **Flexible Assessment Items**: Add unlimited tests and assignments per subject
 
-
+<br/>
 
 <div align="center">
   <img
