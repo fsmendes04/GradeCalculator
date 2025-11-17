@@ -15,12 +15,27 @@ interface Subject {
   tests: GradeItem[];
   assignments: GradeItem[];
   expanded: boolean;
+  targetGrade: string;
 }
 
 export default function GradePredictor() {
   const LOCAL_STORAGE_KEY = 'gradePredictorSubjects_v1_fsmen';
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  const getGradeColor = (grade: number): string => {
+    if (grade >= 15) return 'text-green-600';
+    if (grade >= 12) return 'text-yellow-400';
+    if (grade >= 10) return 'text-orange-600';
+    return 'text-red-600';
+  };
+
+  const getGradeBgColor = (grade: number): string => {
+    if (grade >= 15) return 'bg-green-500';
+    if (grade >= 12) return 'bg-yellow-400';
+    if (grade >= 10) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
 
   // Load subjects from localStorage on mount
   useEffect(() => {
@@ -52,7 +67,8 @@ export default function GradePredictor() {
       semester,
       tests: [],
       assignments: [],
-      expanded: true
+      expanded: true,
+      targetGrade: ''
     }]);
   };
 
@@ -70,6 +86,10 @@ export default function GradePredictor() {
 
   const updateSubjectWeight = (id: number, weight: string): void => {
     setSubjects(subjects.map(s => s.id === id ? { ...s, weight } : s));
+  };
+
+  const updateSubjectTargetGrade = (id: number, targetGrade: string): void => {
+    setSubjects(subjects.map(s => s.id === id ? { ...s, targetGrade } : s));
   };
 
   const addTest = (subjectId: number): void => {
@@ -130,9 +150,9 @@ export default function GradePredictor() {
 
   const calculateSubjectGrade = (subject: Subject): number => {
     const allGrades = [
-      ...subject.tests.map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0 })),
-      ...subject.assignments.map(a => ({ score: parseFloat(a.score) || 0, weight: parseFloat(a.weight) || 0 }))
-    ];
+      ...subject.tests.map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0, hasScore: t.score !== '' })),
+      ...subject.assignments.map(a => ({ score: parseFloat(a.score) || 0, weight: parseFloat(a.weight) || 0, hasScore: a.score !== '' }))
+    ].filter(g => g.hasScore && g.weight > 0);
 
     if (allGrades.length === 0) return 0;
 
@@ -144,7 +164,9 @@ export default function GradePredictor() {
   };
 
   const calculateSubjectGradeTestsOnly = (subject: Subject): number => {
-    const tests = subject.tests.map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0 }));
+    const tests = subject.tests
+      .map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0, hasScore: t.score !== '' }))
+      .filter(t => t.hasScore && t.weight > 0);
     if (tests.length === 0) return 0;
     const totalWeight = tests.reduce((sum, t) => sum + t.weight, 0);
     if (totalWeight === 0) return 0;
@@ -153,7 +175,9 @@ export default function GradePredictor() {
   };
 
   const calculateSubjectGradeAssignmentsOnly = (subject: Subject): number => {
-    const assignments = subject.assignments.map(a => ({ score: parseFloat(a.score) || 0, weight: parseFloat(a.weight) || 0 }));
+    const assignments = subject.assignments
+      .map(a => ({ score: parseFloat(a.score) || 0, weight: parseFloat(a.weight) || 0, hasScore: a.score !== '' }))
+      .filter(a => a.hasScore && a.weight > 0);
     if (assignments.length === 0) return 0;
     const totalWeight = assignments.reduce((sum, a) => sum + a.weight, 0);
     if (totalWeight === 0) return 0;
@@ -163,7 +187,11 @@ export default function GradePredictor() {
 
   const calculateMeanGrade = (): number => {
     if (subjects.length === 0) return 0;
-    const validSubjects = subjects.filter(s => s.tests.length > 0 || s.assignments.length > 0);
+    const validSubjects = subjects.filter(s => {
+      const hasValidTests = s.tests.some(t => t.score !== '' && t.weight !== '');
+      const hasValidAssignments = s.assignments.some(a => a.score !== '' && a.weight !== '');
+      return hasValidTests || hasValidAssignments;
+    });
     if (validSubjects.length === 0) return 0;
 
     const totalWeight = validSubjects.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
@@ -179,7 +207,7 @@ export default function GradePredictor() {
 
   const calculateMeanGradeTestsOnly = (): number => {
     if (subjects.length === 0) return 0;
-    const validSubjects = subjects.filter(s => s.tests.length > 0);
+    const validSubjects = subjects.filter(s => s.tests.some(t => t.score !== '' && t.weight !== ''));
     if (validSubjects.length === 0) return 0;
 
     const totalWeight = validSubjects.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
@@ -191,7 +219,7 @@ export default function GradePredictor() {
 
   const calculateMeanGradeAssignmentsOnly = (): number => {
     if (subjects.length === 0) return 0;
-    const validSubjects = subjects.filter(s => s.assignments.length > 0);
+    const validSubjects = subjects.filter(s => s.assignments.some(a => a.score !== '' && a.weight !== ''));
     if (validSubjects.length === 0) return 0;
 
     const totalWeight = validSubjects.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
@@ -199,6 +227,35 @@ export default function GradePredictor() {
 
     const weightedSum = validSubjects.reduce((acc, s) => acc + (calculateSubjectGradeAssignmentsOnly(s) * (parseFloat(s.weight) || 0)), 0);
     return weightedSum / totalWeight;
+  };
+
+  const calculateRequiredGrade = (subject: Subject): string => {
+    const targetGrade = parseFloat(subject.targetGrade);
+    if (!targetGrade || isNaN(targetGrade)) return '-';
+
+    const allGrades = [
+      ...subject.tests.map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0, hasScore: t.score !== '' })),
+      ...subject.assignments.map(a => ({ score: parseFloat(a.score) || 0, weight: parseFloat(a.weight) || 0, hasScore: a.score !== '' }))
+    ];
+
+    const completedItems = allGrades.filter(g => g.hasScore && g.weight > 0);
+    const itemsWithWeight = allGrades.filter(g => g.weight > 0);
+    const totalWeight = itemsWithWeight.reduce((sum, g) => sum + g.weight, 0);
+    const completedWeight = completedItems.reduce((sum, g) => sum + g.weight, 0);
+    const remainingWeight = totalWeight - completedWeight;
+
+    if (remainingWeight <= 0) {
+      const currentGrade = calculateSubjectGrade(subject);
+      return currentGrade >= targetGrade ? 'Target Achieved!' : 'No remaining assessments';
+    }
+
+    const currentWeightedSum = completedItems.reduce((sum, g) => sum + (g.score * g.weight), 0);
+    const requiredWeightedSum = (targetGrade * totalWeight) - currentWeightedSum;
+    const requiredGrade = requiredWeightedSum / remainingWeight;
+
+    if (requiredGrade > 20) return 'Not achievable';
+    if (requiredGrade < 0) return 'Already achieved!';
+    return requiredGrade.toFixed(2);
   };
 
   const meanGrade = calculateMeanGrade();
@@ -219,9 +276,8 @@ export default function GradePredictor() {
             <h1 className="text-3xl font-bold text-blue-900">Grade Predictor</h1>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-4xl font-bold text-blue-600">{meanGrade.toFixed(2)}</p>
+                <p className={`text-4xl font-bold ${getGradeColor(meanGrade)}`}>{meanGrade.toFixed(2)}</p>
               </div>
-              <Calculator className="text-blue-600" size={40} />
             </div>
           </div>
 
@@ -229,13 +285,13 @@ export default function GradePredictor() {
             <h2 className="text-lg font-semibold text-blue-900 mb-4">Grade Breakdown</h2>
             <div className="space-y-3">
               <div>
-                <div className="flex justify-between mb-1">
+                <div className="flex justify-between mb-2">
                   <span className="text-sm text-blue-700">Total Grade</span>
                   <span className="text-sm font-bold text-blue-900">{meanGrade.toFixed(2)} / 20</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-6">
                   <div
-                    className="bg-blue-600 h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold"
+                    className={`${getGradeBgColor(meanGrade)} h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold`}
                     style={{ width: `${(meanGrade / 20) * 100}%` }}
                   >
                     {meanGrade > 0 && `${meanGrade.toFixed(2)}`}
@@ -244,13 +300,13 @@ export default function GradePredictor() {
               </div>
 
               <div>
-                <div className="flex justify-between mb-1">
+                <div className="flex justify-between mb-2">
                   <span className="text-sm text-blue-700">Tests Only</span>
                   <span className="text-sm font-bold text-blue-900">{meanGradeTestsOnly.toFixed(2)} / 20</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-6">
                   <div
-                    className="bg-blue-500 h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold"
+                    className={`${getGradeBgColor(meanGradeTestsOnly)} h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold`}
                     style={{ width: `${(meanGradeTestsOnly / 20) * 100}%` }}
                   >
                     {meanGradeTestsOnly > 0 && `${meanGradeTestsOnly.toFixed(2)}`}
@@ -259,13 +315,13 @@ export default function GradePredictor() {
               </div>
 
               <div>
-                <div className="flex justify-between mb-1">
+                <div className="flex justify-between mb-2">
                   <span className="text-sm text-blue-700">Assignments Only</span>
                   <span className="text-sm font-bold text-blue-900">{meanGradeAssignmentsOnly.toFixed(2)} / 20</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-6">
                   <div
-                    className="bg-blue-400 h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold"
+                    className={`${getGradeBgColor(meanGradeAssignmentsOnly)} h-6 rounded-full transition-all duration-300 flex items-center justify-center text-white text-xs font-bold`}
                     style={{ width: `${(meanGradeAssignmentsOnly / 20) * 100}%` }}
                   >
                     {meanGradeAssignmentsOnly > 0 && `${meanGradeAssignmentsOnly.toFixed(2)}`}
@@ -324,8 +380,10 @@ export default function GradePredictor() {
                                 />
                                 <span className="text-xs text-blue-700">ECTS</span>
                               </div>
-                              <span className="text-xs text-blue-700 ml-2">Grade</span>
-                              <span className="text-lg font-bold text-blue-600 ml-1">{subjectGrade > 0 ? subjectGrade.toFixed(2) : '-'}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-blue-700">Grade</span>
+                                <span className={`text-lg font-bold ${subjectGrade > 0 ? getGradeColor(subjectGrade) : 'text-blue-700'} ml-1`}>{subjectGrade > 0 ? subjectGrade.toFixed(2) : '-'}</span>
+                              </div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); removeSubject(subject.id); }}
                                 className="text-blue-500 hover:text-blue-700 transition ml-2"
@@ -336,6 +394,41 @@ export default function GradePredictor() {
                           </div>
                           {subject.expanded && (
                             <div className="mt-4 pt-4 border-t border-blue-100">
+                              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                                <div className="flex items-center gap-4 mb-2">
+                                  <label className="text-sm font-semibold text-blue-800">Target Grade:</label>
+                                  <input
+                                    type="number"
+                                    value={subject.targetGrade}
+                                    onChange={(e) => updateSubjectTargetGrade(subject.id, e.target.value)}
+                                    min="0"
+                                    max="20"
+                                    step="0.1"
+                                    placeholder="-"
+                                    className="w-20 px-2 py-1 border rounded text-center"
+                                  />
+                                  {subject.targetGrade && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-blue-700">Required grade on remaining:</span>
+                                      <span className="text-sm font-bold text-blue-900">{calculateRequiredGrade(subject)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                {subjectGrade > 0 && (
+                                  <div className="mt-2">
+                                    <div className="flex justify-between mb-1">
+                                      <span className="text-xs text-blue-700">Current Progress</span>
+                                      <span className="text-xs font-bold text-blue-900">{subjectGrade.toFixed(2)} / 20</span>
+                                    </div>
+                                    <div className="w-full bg-blue-200 rounded-full h-4">
+                                      <div
+                                        className={`${getGradeBgColor(subjectGrade)} h-4 rounded-full transition-all duration-300`}
+                                        style={{ width: `${(subjectGrade / 20) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                               <div className="grid md:grid-cols-2 gap-6">
                                 <div>
                                   <div className="flex items-center justify-between mb-3">
@@ -348,40 +441,55 @@ export default function GradePredictor() {
                                       Add
                                     </button>
                                   </div>
-                                  {subject.tests.map((test, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 mb-2 p-2 bg-blue-50 rounded">
-                                      <div className="flex-1">
-                                        <label className="text-xs text-blue-700">Score (0-20)</label>
-                                        <input
-                                          type="number"
-                                          value={test.score}
-                                          onChange={(e) => updateTest(subject.id, idx, 'score', e.target.value)}
-                                          min="0"
-                                          max="20"
-                                          step="0.01"
-                                          placeholder=""
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
+                                  {subject.tests.map((test, idx) => {
+                                    const testScore = parseFloat(test.score) || 0;
+                                    return (
+                                      <div key={idx} className="mb-2">
+                                        <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
+                                          <div className="flex-1">
+                                            <label className="text-xs text-blue-700">Score (0-20)</label>
+                                            <input
+                                              type="number"
+                                              value={test.score}
+                                              onChange={(e) => updateTest(subject.id, idx, 'score', e.target.value)}
+                                              min="0"
+                                              max="20"
+                                              step="0.01"
+                                              placeholder=""
+                                              className="w-full px-2 py-1 border rounded text-sm"
+                                            />
+                                          </div>
+                                          <div className="flex-1">
+                                            <label className="text-xs text-blue-700">Weight (%)</label>
+                                            <input
+                                              type="number"
+                                              value={test.weight}
+                                              onChange={(e) => updateTest(subject.id, idx, 'weight', e.target.value)}
+                                              min="0"
+                                              placeholder=""
+                                              className="w-full px-2 py-1 border rounded text-sm"
+                                            />
+                                          </div>
+                                          <button
+                                            onClick={() => removeTest(subject.id, idx)}
+                                            className="text-blue-700 hover:text-blue-900 mt-4"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </div>
+                                        {testScore > 0 && (
+                                          <div className="mt-1 px-2">
+                                            <div className="w-full bg-blue-200 rounded-full h-2">
+                                              <div
+                                                className={`${getGradeBgColor(testScore)} h-2 rounded-full transition-all duration-300`}
+                                                style={{ width: `${(testScore / 20) * 100}%` }}
+                                              />
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="flex-1">
-                                        <label className="text-xs text-blue-700">Weight (%)</label>
-                                        <input
-                                          type="number"
-                                          value={test.weight}
-                                          onChange={(e) => updateTest(subject.id, idx, 'weight', e.target.value)}
-                                          min="0"
-                                          placeholder=""
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                      <button
-                                        onClick={() => removeTest(subject.id, idx)}
-                                        className="text-blue-700 hover:text-blue-900 mt-4"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                                 <div>
                                   <div className="flex items-center justify-between mb-3">
@@ -394,40 +502,55 @@ export default function GradePredictor() {
                                       Add
                                     </button>
                                   </div>
-                                  {subject.assignments.map((assignment, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 mb-2 p-2 bg-blue-50 rounded">
-                                      <div className="flex-1">
-                                        <label className="text-xs text-blue-700">Score (0-20)</label>
-                                        <input
-                                          type="number"
-                                          value={assignment.score}
-                                          onChange={(e) => updateAssignment(subject.id, idx, 'score', e.target.value)}
-                                          min="0"
-                                          max="20"
-                                          step="0.01"
-                                          placeholder=""
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
+                                  {subject.assignments.map((assignment, idx) => {
+                                    const assignmentScore = parseFloat(assignment.score) || 0;
+                                    return (
+                                      <div key={idx} className="mb-2">
+                                        <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
+                                          <div className="flex-1">
+                                            <label className="text-xs text-blue-700">Score (0-20)</label>
+                                            <input
+                                              type="number"
+                                              value={assignment.score}
+                                              onChange={(e) => updateAssignment(subject.id, idx, 'score', e.target.value)}
+                                              min="0"
+                                              max="20"
+                                              step="0.01"
+                                              placeholder=""
+                                              className="w-full px-2 py-1 border rounded text-sm"
+                                            />
+                                          </div>
+                                          <div className="flex-1">
+                                            <label className="text-xs text-blue-700">Weight (%)</label>
+                                            <input
+                                              type="number"
+                                              value={assignment.weight}
+                                              onChange={(e) => updateAssignment(subject.id, idx, 'weight', e.target.value)}
+                                              min="0"
+                                              placeholder=""
+                                              className="w-full px-2 py-1 border rounded text-sm"
+                                            />
+                                          </div>
+                                          <button
+                                            onClick={() => removeAssignment(subject.id, idx)}
+                                            className="text-blue-700 hover:text-blue-900 mt-4"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </div>
+                                        {assignmentScore > 0 && (
+                                          <div className="mt-1 px-2">
+                                            <div className="w-full bg-blue-200 rounded-full h-2">
+                                              <div
+                                                className={`${getGradeBgColor(assignmentScore)} h-2 rounded-full transition-all duration-300`}
+                                                style={{ width: `${(assignmentScore / 20) * 100}%` }}
+                                              />
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="flex-1">
-                                        <label className="text-xs text-blue-700">Weight (%)</label>
-                                        <input
-                                          type="number"
-                                          value={assignment.weight}
-                                          onChange={(e) => updateAssignment(subject.id, idx, 'weight', e.target.value)}
-                                          min="0"
-                                          placeholder=""
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                      <button
-                                        onClick={() => removeAssignment(subject.id, idx)}
-                                        className="text-blue-700 hover:text-blue-900 mt-4"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </div>
