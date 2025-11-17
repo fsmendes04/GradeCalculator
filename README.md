@@ -1,46 +1,32 @@
-# Getting Started with Create React App
+# Grade Predictor 📊
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive web-based grade tracking and prediction tool designed for students to monitor their academic performance, set targets, and calculate required grades.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+Grade Predictor is a React-based application that helps students manage their academic grades across multiple years and semesters. It provides real-time grade calculations, progress tracking, and intelligent grade target prediction to help students understand what scores they need to achieve their academic goals.
 
-### `npm start`
+Perfect for students following the European grading system (0-20 scale) with ECTS credits.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Features
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### 📈 Core Functionality
+- **Multi-Year/Semester Organization**: Organize subjects by year (1-2) and semester (1-2)
+- **Dual Assessment Types**: Track both tests and assignments with individual weights
+- **Real-Time Calculations**: Instant weighted grade calculations as you input scores
+- **Color-Coded Progress**: Visual indicators showing grade performance (green for excellent, red for needs improvement)
 
-### `npm test`
+### 🎯 Target Grade Calculator
+- Set target grades for individual subjects
+- Automatic calculation of required grades on remaining assessments
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 📊 Progress Tracking
+- Progress bars showing current subject grades
+- Grade breakdown view
+- Overall GPA calculation across all subjects
+- Visual grade distribution by category
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+### ⚙️ Customization
+- **Weighted Scoring**: Assign different weights to tests and assignments
+- **ECTS Credits**: Track subject credits for weighted GPA calculation
+- **Flexible Assessment Items**: Add unlimited tests and assignments per subject
