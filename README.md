@@ -10,7 +10,7 @@ Perfect for students following the European grading system (0-20 scale) with ECT
 
 ## Technologies
 
-<div align="center">
+<div align="left">
 
 <img src="https://skillicons.dev/icons?i=react,typescript,tailwind,javascript" />
 
