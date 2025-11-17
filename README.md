@@ -38,3 +38,6 @@ Perfect for students following the European grading system (0-20 scale) with ECT
 - **Weighted Scoring**: Assign different weights to tests and assignments
 - **ECTS Credits**: Track subject credits for weighted GPA calculation
 - **Flexible Assessment Items**: Add unlimited tests and assignments per subject
+
+  <img width="1028" height="910" alt="image" src="https://github.com/user-attachments/assets/7a3a9bc7-b4de-4b32-a6ca-808ec53f1ca5" />
+
