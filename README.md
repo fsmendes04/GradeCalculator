@@ -1,4 +1,4 @@
-# Grade Predictor 📊
+# Grade Calculator
 
 A comprehensive web-based grade tracking and prediction tool designed for students to monitor their academic performance, set targets, and calculate required grades.
 
@@ -7,6 +7,14 @@ A comprehensive web-based grade tracking and prediction tool designed for studen
 Grade Predictor is a React-based application that helps students manage their academic grades across multiple years and semesters. It provides real-time grade calculations, progress tracking, and intelligent grade target prediction to help students understand what scores they need to achieve their academic goals.
 
 Perfect for students following the European grading system (0-20 scale) with ECTS credits.
+
+## Technologies
+
+<div align="center">
+
+<img src="https://skillicons.dev/icons?i=react,typescript,tailwind,javascript" />
+
+</div>
 
 ## Features
 
