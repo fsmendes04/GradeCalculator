@@ -24,16 +24,16 @@ export default function GradePredictor() {
   const [loaded, setLoaded] = useState(false);
 
   const getGradeColor = (grade: number): string => {
-    if (grade >= 15) return 'text-green-600';
-    if (grade >= 12) return 'text-yellow-400';
-    if (grade >= 10) return 'text-orange-600';
+    if (grade >= 14.5) return 'text-green-600';
+    if (grade >= 11.5) return 'text-yellow-400';
+    if (grade >= 9.5) return 'text-orange-600';
     return 'text-red-600';
   };
 
   const getGradeBgColor = (grade: number): string => {
-    if (grade >= 15) return 'bg-green-500';
-    if (grade >= 12) return 'bg-yellow-400';
-    if (grade >= 10) return 'bg-orange-500';
+    if (grade >= 14.5) return 'bg-green-500';
+    if (grade >= 11.5) return 'bg-yellow-400';
+    if (grade >= 9.5) return 'bg-orange-500';
     return 'bg-red-500';
   };
 
