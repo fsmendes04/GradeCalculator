@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calculator, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Calculator, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface GradeItem {
   score: string;
@@ -19,9 +20,11 @@ interface Subject {
 }
 
 export default function GradePredictor() {
+  const navigate = useNavigate();
   const LOCAL_STORAGE_KEY = 'gradePredictorSubjects_v1_fsmen';
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({ 1: true, 2: true });
 
   const getGradeColor = (grade: number): string => {
     if (grade >= 14.5) return 'text-green-600';
@@ -274,10 +277,8 @@ export default function GradePredictor() {
         <div className="bg-blue-50 rounded-2xl shadow-xl p-8 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-blue-900">Grade Predictor</h1>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className={`text-4xl font-bold ${getGradeColor(meanGrade)}`}>{meanGrade.toFixed(2)}</p>
-              </div>
+            <div className="text-right">
+              <p className={`text-4xl font-bold ${getGradeColor(meanGrade)}`}>{meanGrade.toFixed(2)}</p>
             </div>
           </div>
 
@@ -330,14 +331,31 @@ export default function GradePredictor() {
               </div>
             </div>
           </div>
+          
+          <div className="mt-6 flex justify-right">
+            <button
+              onClick={() => navigate('/chart')}
+              className="flex items-center gap-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md font-semibold"
+            >
+              Check Test Grade
+            </button>
+          </div>
         </div>
 
         <div className="space-y-6">
           {[1, 2].map(year => (
             <div key={year} className="bg-blue-50 rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-blue-900 mb-4">Year {year}</h2>
-              {[1, 2].map(semester => (
-                <div key={semester} className="mb-6 last:mb-0">
+              <button
+                onClick={() => setExpandedYears({ ...expandedYears, [year]: !expandedYears[year] })}
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity w-full"
+              >
+                {expandedYears[year] ? <ChevronDown size={24} className="text-blue-600" /> : <ChevronRight size={24} className="text-blue-600" />}
+                <h2 className="text-2xl font-bold text-blue-900">Year {year}</h2>
+              </button>
+              {expandedYears[year] && (
+                <>
+                  {[1, 2].map((semester: number) => (
+                    <div key={semester} className="mb-6 last:mb-0">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xl font-semibold text-blue-800">Semester {semester}</h3>
                     <button
@@ -560,7 +578,9 @@ export default function GradePredictor() {
                     })}
                   </div>
                 </div>
-              ))}
+                    ))}
+                </>
+              )}
             </div>
           ))}
         </div>
