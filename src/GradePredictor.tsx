@@ -382,7 +382,7 @@ export default function GradePredictor() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-blue-700">Grade</span>
-                                <span className={`text-lg font-bold ${subjectGrade > 0 ? getGradeColor(subjectGrade) : 'text-blue-700'} ml-1`}>{subjectGrade > 0 ? subjectGrade.toFixed(2) : '-'}</span>
+                                <span className={`text-lg font-bold ${subjectGrade > 0 ? getGradeColor(subjectGrade) : 'text-blue-700'} ml-1`}>{subjectGrade > 0 ? Math.round(subjectGrade) : '-'}</span>
                               </div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); removeSubject(subject.id); }}
