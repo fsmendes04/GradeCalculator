@@ -17,6 +17,8 @@ interface Subject {
   assignments: GradeItem[];
   expanded: boolean;
   targetGrade: string;
+  extraPoints: string;
+  extraPointsExpanded: boolean;
 }
 
 export default function GradePredictor() {
@@ -71,7 +73,9 @@ export default function GradePredictor() {
       tests: [],
       assignments: [],
       expanded: true,
-      targetGrade: ''
+      targetGrade: '',
+      extraPoints: '',
+      extraPointsExpanded: false
     }]);
   };
 
@@ -93,6 +97,18 @@ export default function GradePredictor() {
 
   const updateSubjectTargetGrade = (id: number, targetGrade: string): void => {
     setSubjects(subjects.map(s => s.id === id ? { ...s, targetGrade } : s));
+  };
+
+  const updateSubjectExtraPoints = (id: number, extraPoints: string): void => {
+    setSubjects(subjects.map(s => s.id === id ? { ...s, extraPoints } : s));
+  };
+
+  const addExtraPointsSection = (id: number): void => {
+    setSubjects(subjects.map(s => s.id === id ? { ...s, extraPointsExpanded: true } : s));
+  };
+
+  const deleteExtraPointsSection = (id: number): void => {
+    setSubjects(subjects.map(s => s.id === id ? { ...s, extraPointsExpanded: false, extraPoints: '' } : s));
   };
 
   const addTest = (subjectId: number): void => {
@@ -163,7 +179,9 @@ export default function GradePredictor() {
     if (totalWeight === 0) return 0;
 
     const weightedSum = allGrades.reduce((sum, g) => sum + (g.score * g.weight), 0);
-    return weightedSum / totalWeight;
+    const baseGrade = weightedSum / totalWeight;
+    const extraPoints = parseFloat(subject.extraPoints) || 0;
+    return baseGrade + extraPoints;
   };
 
   const calculateSubjectGradeTestsOnly = (subject: Subject): number => {
@@ -193,7 +211,11 @@ export default function GradePredictor() {
     const validSubjects = subjects.filter(s => {
       const hasValidTests = s.tests.some(t => t.score !== '' && t.weight !== '');
       const hasValidAssignments = s.assignments.some(a => a.score !== '' && a.weight !== '');
-      return hasValidTests || hasValidAssignments;
+      // Exclude if any test has weight but no score
+      const allTestsWithWeightHaveScores = s.tests.filter(t => t.weight !== '').every(t => t.score !== '');
+      // Exclude if any assignment has weight but no score
+      const allAssignmentsWithWeightHaveScores = s.assignments.filter(a => a.weight !== '').every(a => a.score !== '');
+      return (hasValidTests || hasValidAssignments) && allTestsWithWeightHaveScores && allAssignmentsWithWeightHaveScores;
     });
     if (validSubjects.length === 0) return 0;
 
@@ -210,7 +232,13 @@ export default function GradePredictor() {
 
   const calculateMeanGradeTestsOnly = (): number => {
     if (subjects.length === 0) return 0;
-    const validSubjects = subjects.filter(s => s.tests.some(t => t.score !== '' && t.weight !== ''));
+    const validSubjects = subjects.filter(s => {
+      // Must have at least one test with score and weight
+      const hasValidTests = s.tests.some(t => t.score !== '' && t.weight !== '');
+      // All tests with weight must have scores
+      const allTestsWithWeightHaveScores = s.tests.filter(t => t.weight !== '').every(t => t.score !== '');
+      return hasValidTests && allTestsWithWeightHaveScores;
+    });
     if (validSubjects.length === 0) return 0;
 
     const totalWeight = validSubjects.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
@@ -222,7 +250,11 @@ export default function GradePredictor() {
 
   const calculateMeanGradeAssignmentsOnly = (): number => {
     if (subjects.length === 0) return 0;
-    const validSubjects = subjects.filter(s => s.assignments.some(a => a.score !== '' && a.weight !== ''));
+    const validSubjects = subjects.filter(s => {
+      const hasValidAssignments = s.assignments.some(a => a.score !== '' && a.weight !== '');
+      const allAssignmentsWithWeightHaveScores = s.assignments.filter(a => a.weight !== '').every(a => a.score !== '');
+      return hasValidAssignments && allAssignmentsWithWeightHaveScores;
+    });
     if (validSubjects.length === 0) return 0;
 
     const totalWeight = validSubjects.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
@@ -235,6 +267,9 @@ export default function GradePredictor() {
   const calculateRequiredGrade = (subject: Subject): string => {
     const targetGrade = parseFloat(subject.targetGrade);
     if (!targetGrade || isNaN(targetGrade)) return '-';
+
+    const extraPoints = parseFloat(subject.extraPoints) || 0;
+    const adjustedTargetGrade = targetGrade - extraPoints;
 
     const allGrades = [
       ...subject.tests.map(t => ({ score: parseFloat(t.score) || 0, weight: parseFloat(t.weight) || 0, hasScore: t.score !== '' })),
@@ -249,11 +284,11 @@ export default function GradePredictor() {
 
     if (remainingWeight <= 0) {
       const currentGrade = calculateSubjectGrade(subject);
-      return currentGrade >= targetGrade ? 'Target Achieved!' : 'No remaining assessments';
+      return currentGrade >= targetGrade ? 'Target Achieved!' : 'Target Not Achieved';
     }
 
     const currentWeightedSum = completedItems.reduce((sum, g) => sum + (g.score * g.weight), 0);
-    const requiredWeightedSum = (targetGrade * totalWeight) - currentWeightedSum;
+    const requiredWeightedSum = (adjustedTargetGrade * totalWeight) - currentWeightedSum;
     const requiredGrade = requiredWeightedSum / remainingWeight;
 
     if (requiredGrade > 20) return 'Not achievable';
@@ -426,12 +461,34 @@ export default function GradePredictor() {
                                     className="w-20 px-2 py-1 border rounded text-center"
                                   />
                                   {subject.targetGrade && (
-                                    <div className="flex items-center gap-2">
+                                    <>
                                       <span className="text-sm text-blue-700">Required grade on remaining:</span>
                                       <span className="text-sm font-bold text-blue-900">{calculateRequiredGrade(subject)}</span>
-                                    </div>
+                                      <div className="ml-auto">
+                                        <button
+                                          onClick={() => subject.extraPointsExpanded ? deleteExtraPointsSection(subject.id) : addExtraPointsSection(subject.id)}
+                                          className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
+                                        >
+                                          {subject.extraPointsExpanded ? 'Delete Extra Points' : 'Add Extra Points'}
+                                        </button>
+                                      </div>
+                                    </>
                                   )}
                                 </div>
+                                {subject.extraPointsExpanded && (
+                                  <div className="flex items-center gap-4 mb-2">
+                                    <label className="text-sm font-semibold text-blue-800">Extra Points:</label>
+                                    <input
+                                      type="number"
+                                      value={subject.extraPoints}
+                                      onChange={(e) => updateSubjectExtraPoints(subject.id, e.target.value)}
+                                      min="0"
+                                      step="0.1"
+                                      placeholder="-"
+                                      className="w-20 px-2 py-1 border rounded text-center"
+                                    />
+                                  </div>
+                                )}
                                 {subjectGrade > 0 && (
                                   <div className="mt-2">
                                     <div className="flex justify-between mb-1">
